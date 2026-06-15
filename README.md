@@ -1,4 +1,4 @@
-# Hi there, I'm [Keyur Joshi] 👋 📊
+# Hi there, I'm Keyur Joshi 👋 📊
 
 Welcome to my digital portfolio! I am a business-driven professional blending management strategies with data analytics to optimize financial and operational efficiency. 📈✨
 
