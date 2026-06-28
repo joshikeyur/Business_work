@@ -35,4 +35,4 @@ Welcome to my digital portfolio! I am a business-driven professional blending ma
 *    **Tweeter(X):** [@keyurjoshi_work]
 
 *"Leveraging data to drive smarter business decisions."* 💡
-**Driving Business Synergy** **[ 1+1=11]
+**Driving Business Synergy** **[ 1+1=11]**
