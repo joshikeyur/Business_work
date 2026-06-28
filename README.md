@@ -32,7 +32,7 @@ Welcome to my digital portfolio! I am a business-driven professional blending ma
 ### 📫 Connect with Me
 * 💼 **LinkedIn:** [https://www.linkedin.com/in/keyur-joshi-work/]
 * 📧 **Email:** [joshikeyur.work@gmail.com]
-*    **Tweeter(X):** [@KeyurJoshi_work]
+*    **Tweeter(X):** [@keyurjoshi_work]
 
 *"Leveraging data to drive smarter business decisions."* 💡
 **Driving Business Synergy** **[ 1+1=11]
