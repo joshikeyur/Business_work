@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horizon OS — Kinetic Morph Pill Window Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Custom Wallpaper Mesh Gradient */
+        .os-wallpaper {
+            background-color: #07090e;
+            background-image: 
+                radial-gradient(at 15% 15%, rgba(56, 189, 248, 0.16) 0px, transparent 45%),
+                radial-gradient(at 85% 20%, rgba(139, 92, 246, 0.16) 0px, transparent 50%),
+                radial-gradient(at 50% 85%, rgba(244, 63, 94, 0.11) 0px, transparent 50%),
+                radial-gradient(at 80% 80%, rgba(16, 185, 129, 0.08) 0px, transparent 40%);
+        }
+
+        /* Smooth Window Physics Transitions */
+        .os-window {
+            transition: 
+                width 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+                height 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+                top 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+                left 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.3s ease,
+                border-radius 0.35s ease;
+            will-change: width, height, top, left, transform, opacity;
+        }
+
+        .os-window.dragging-pill {
+            transition: transform 0.08s ease-out !important;
+        }
+
+        /* Kinetic Morph Pill Styles */
+        .horizon-pill-wrapper {
+            padding: 6px 4px;
+            cursor: grab;
+        }
+        .horizon-pill-wrapper:active {
+            cursor: grabbing;
+        }
+
+        .horizon-pill {
+            width: 56px;
+            height: 12px;
+            border-radius: 9999px;
+            transition: 
+                width 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+                height 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+                background-color 0.25s ease,
+                box-shadow 0.35s ease,
+                transform 0.2s ease,
+                border-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Expanded Wake-up State on Proximity/Hover or Drag */
+        .horizon-pill-wrapper:hover .horizon-pill,
+        .horizon-pill.pill-active {
+            width: 198px;
+            height: 30px;
+        }
+
+        .pill-segments {
+            opacity: 0;
+            transform: scale(0.92);
+            transition: opacity 0.22s ease 0.04s, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+
+        .horizon-pill-wrapper:hover .pill-segments,
+        .horizon-pill.pill-active .pill-segments {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        /* Status Aura Glow Variations */
+        .aura-idle {
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.38);
+            box-shadow: 0 0 14px rgba(255, 255, 255, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+        }
+        .horizon-pill-wrapper:hover .aura-idle {
+            background: rgba(15, 23, 42, 0.88);
+            border-color: rgba(255, 255, 255, 0.45);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 18px rgba(255, 255, 255, 0.2);
+        }
+
+        .aura-unsaved {
+            background: rgba(245, 158, 11, 0.32);
+            border: 1px solid rgba(251, 191, 36, 0.85);
+            box-shadow: 0 0 18px rgba(245, 158, 11, 0.55), inset 0 1px 2px rgba(254, 243, 199, 0.5);
+            animation: amberBreath 2.4s infinite ease-in-out;
+        }
+        .horizon-pill-wrapper:hover .aura-unsaved {
+            background: rgba(24, 20, 15, 0.92);
+            border-color: rgba(251, 191, 36, 0.9);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6), 0 0 22px rgba(245, 158, 11, 0.5);
+        }
+
+        .aura-processing {
+            background: rgba(56, 189, 248, 0.32);
+            border: 1px solid rgba(56, 189, 248, 0.9);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.65), inset 0 1px 2px rgba(224, 242, 254, 0.6);
+            animation: bluePulse 1.6s infinite ease-in-out;
+        }
+        .horizon-pill-wrapper:hover .aura-processing {
+            background: rgba(12, 22, 38, 0.92);
+            border-color: rgba(56, 189, 248, 0.95);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6), 0 0 24px rgba(56, 189, 248, 0.55);
+        }
+
+        @keyframes amberBreath {
+            0%, 100% { box-shadow: 0 0 12px rgba(245, 158, 11, 0.45); }
+            50% { box-shadow: 0 0 24px rgba(245, 158, 11, 0.85); }
+        }
+
+        @keyframes bluePulse {
+            0%, 100% { box-shadow: 0 0 14px rgba(56, 189, 248, 0.45); }
+            50% { box-shadow: 0 0 26px rgba(56, 189, 248, 0.95); }
+        }
+
+        /* SVG Countdown Circle Animation */
+        .countdown-ring-circle {
+            transition: stroke-dashoffset 0.1s linear;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="os-wallpaper h-screen w-screen overflow-hidden flex flex-col justify-between relative text-slate-100 select-none">
+
+    <!-- TOP SYSTEM MENU BAR -->
+    <header class="h-8 w-full bg-slate-950/60 backdrop-blur-md border-b border-white/10 px-4 flex items-center justify-between z-40 text-xs">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-1.5 font-semibold text-white">
+                <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-sky-400 to-indigo-500 inline-block"></span>
+                <span>Horizon OS</span>
+            </div>
+            <span class="text-slate-400 hidden sm:inline">Studio Workspace</span>
+            <span id="top-bar-mode-badge" class="px-2 py-0.5 rounded-full bg-white/10 text-[11px] text-slate-200 font-medium">
+                State: Centered Window
+            </span>
+        </div>
+
+        <!-- Gesture Telemetry Pill in Top Bar -->
+        <div id="gesture-feedback-banner" class="hidden md:flex items-center gap-2 text-[11px] text-sky-300 bg-sky-500/10 border border-sky-400/20 px-3 py-0.5 rounded-full">
+            <i class="ph-fill ph-hand-swipe-right"></i>
+            <span id="gesture-telemetry-text">Hover or drag the corner Horizon Pill to control window</span>
+        </div>
+
+        <div class="flex items-center gap-3 text-slate-300">
+            <div class="flex items-center gap-1.5">
+                <span id="aura-top-dot" class="w-2 h-2 rounded-full bg-white"></span>
+                <span id="aura-top-label" class="text-[11px] text-slate-300">Aura: Idle</span>
+            </div>
+            <span class="text-white/20">|</span>
+            <span id="system-clock" class="mono text-[11px]">09:41 AM</span>
+        </div>
+    </header>
+
+    <!-- DESKTOP STAGE AREA -->
+    <main id="desktop-stage" class="relative flex-1 w-full h-full overflow-hidden">
+
+        <!-- SNAP ZONE PREVIEW OVERLAY (Shown when dragging Left/Right/Up/Down) -->
+        <div id="snap-preview-overlay" class="pointer-events-none absolute opacity-0 transition-all duration-200 z-20 rounded-2xl border-2 border-sky-400/70 bg-sky-500/15 backdrop-blur-[2px] flex items-center justify-center">
+            <div class="px-4 py-2 rounded-xl bg-slate-900/90 border border-sky-400/40 text-sky-200 text-xs font-semibold tracking-wide flex items-center gap-2 shadow-2xl">
+                <i id="snap-preview-icon" class="ph-bold ph-arrows-out text-base"></i>
+                <span id="snap-preview-label">Release to Snap</span>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- 1. THE MAIN APPLICATION WINDOW WITH KINETIC MORPH PILL         -->
+        <!-- ============================================================== -->
+        <section id="app-window" class="os-window absolute z-30 bg-slate-900/85 backdrop-blur-2xl border border-white/15 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden"
+            style="width: 780px; height: 500px; top: calc(50% - 260px); left: calc(50% - 470px); border-radius: 18px;">
+
+            <!-- WINDOW HEADER BAR featuring the CORNER KINETIC MORPH PILL -->
+            <div id="window-titlebar" class="relative h-12 w-full bg-slate-950/50 border-b border-white/10 px-4 flex items-center justify-between shrink-0 transition-all duration-300">
+                
+                <!-- App Identity & Quick Corner Toggle Cluster -->
+                <div id="titlebar-info-cluster" class="flex items-center gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-inner">
+                            <i class="ph-bold ph-cube-transparent text-white text-xs"></i>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-white tracking-tight">Nova Studio Pro</span>
+                            <span id="unsaved-badge" class="hidden px-1.5 py-0.2 bg-amber-500/20 border border-amber-400/40 text-amber-300 rounded text-[10px] font-medium">Edited</span>
+                            <span id="render-badge" class="hidden px-1.5 py-0.2 bg-sky-500/20 border border-sky-400/40 text-sky-300 rounded text-[10px] font-medium flex items-center gap-1">
+                                <i class="ph-bold ph-spinner animate-spin"></i> <span class="render-pct">64%</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="h-3.5 w-[1px] bg-white/10 hidden sm:block"></div>
+
+                    <!-- Instant Corner Placement Switcher (Top-Left vs Top-Right) -->
+                    <div class="hidden sm:flex items-center bg-slate-900/90 p-0.5 rounded-lg border border-white/10 text-[10px]">
+                        <button id="corner-btn-left" onclick="setPillCorner('left')" 
+                                class="px-2 py-0.5 rounded-md text-slate-400 hover:text-white transition flex items-center gap-1"
+                                title="Anchor Horizon Pill to Top-Left Corner (Mac Style)">
+                            <i class="ph-bold ph-arrow-up-left"></i> Top-Left
+                        </button>
+                        <button id="corner-btn-right" onclick="setPillCorner('right')" 
+                                class="px-2 py-0.5 rounded-md bg-sky-500/25 text-sky-300 border border-sky-400/30 font-semibold transition flex items-center gap-1"
+                                title="Anchor Horizon Pill to Top-Right Corner (Windows Style)">
+                            Top-Right <i class="ph-bold ph-arrow-up-right"></i>
+                        </button>
+                    </div>
+
+                    <span id="window-size-pill" class="hidden md:inline-block px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] text-slate-400 mono">
+                        Default View
+                    </span>
+                </div>
+
+                <!-- ========================================================== -->
+                <!-- CORNER KINETIC MORPH PILL (EXPANDS INWARD FROM CORNER)     -->
+                <!-- ========================================================== -->
+                <div id="horizon-pill-wrapper" class="horizon-pill-wrapper relative z-50 flex flex-col items-end group"
+                     title="Drag Up: Maximize | Drag Down: Live Pip | Drag Left/Right: Split 50% | Click Red Zone: Close">
+                    
+                    <div id="horizon-pill" class="horizon-pill aura-idle flex items-center justify-between">
+                        
+                        <!-- Expanded 3-Zone Interactive Controls (Visible on Proximity Hover / Drag) -->
+                        <div id="pill-segments-grid" class="pill-segments w-full h-full grid grid-cols-3 items-center text-[11px] font-medium">
+                            
+                            <!-- Zone 1: Left / Right Split-Screen Tile -->
+                            <div id="pill-zone-tile" class="h-full flex items-center justify-center gap-1 hover:bg-white/10 transition-colors border-r border-white/10 px-1.5"
+                                 onclick="event.stopPropagation(); cycleSnapSplit();"
+                                 title="Click or Drag Left/Right to Split-Screen 50%">
+                                <button onclick="event.stopPropagation(); triggerWindowAction('snap-left')" class="hover:text-sky-300 text-slate-300 p-0.5 rounded transition" title="Snap Left 50%">
+                                    <i class="ph-bold ph-caret-left text-xs"></i>
+                                </button>
+                                <span class="text-[9px] uppercase tracking-wider text-slate-300 font-semibold">Tile</span>
+                                <button onclick="event.stopPropagation(); triggerWindowAction('snap-right')" class="hover:text-sky-300 text-slate-300 p-0.5 rounded transition" title="Snap Right 50%">
+                                    <i class="ph-bold ph-caret-right text-xs"></i>
+                                </button>
+                            </div>
+
+                            <!-- Zone 2: Center Morph Zone (Up = Max, Down = Live Pip) -->
+                            <div id="pill-zone-morph" class="h-full flex items-center justify-center gap-1.5 hover:bg-white/10 transition-colors border-r border-white/10 px-1.5"
+                                 ondblclick="event.stopPropagation(); triggerWindowAction('toggle-maximize');"
+                                 title="Flick Up to Maximize, Flick Down for Live Pip">
+                                <button onclick="event.stopPropagation(); triggerWindowAction('minimize-pip')" class="hover:text-amber-300 text-slate-300 p-0.5 rounded transition" title="Flick Down: Live Pip Minimize">
+                                    <i class="ph-bold ph-arrow-down-left text-xs"></i>
+                                </button>
+                                <button onclick="event.stopPropagation(); triggerWindowAction('toggle-maximize')" class="hover:text-emerald-300 text-slate-200 p-0.5 rounded transition" title="Flick Up / Double-Click: Fullscreen">
+                                    <i class="ph-bold ph-arrows-out-simple text-xs"></i>
+                                </button>
+                            </div>
+
+                            <!-- Zone 3: Corner Edge Crimson Close Trigger -->
+                            <button id="pill-zone-close" onclick="event.stopPropagation(); triggerWindowAction('close-window')" 
+                                    class="h-full w-full flex items-center justify-center gap-1 bg-rose-500/20 hover:bg-rose-600 text-rose-200 hover:text-white transition-all duration-150 px-2 group/close"
+                                    title="Click or Middle-Click Pill to Close (with 5s Time-Loop Undo)">
+                                <span class="text-[10px] font-semibold tracking-tight">Close</span>
+                                <i class="ph-bold ph-x text-xs group-hover/close:scale-110 transition-transform"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Micro Direction Hint Label underneath on Hover (Aligned to active corner) -->
+                    <div id="pill-micro-tooltip" class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute top-10 right-0 px-2.5 py-1 rounded-full bg-slate-950/95 border border-white/15 text-[10px] text-slate-300 whitespace-nowrap shadow-xl z-50">
+                        Drag <span class="text-sky-300">↑ Max</span> · <span class="text-amber-300">↓ Live Pip</span> · <span class="text-indigo-300">↔ Split 50%</span> · <span class="text-rose-400">Corner Click = Close</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WINDOW BODY CONTENT -->
+            <div class="flex-1 p-5 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-4">
+                
+                <!-- Left Column: Interactive Concept Sandbox -->
+                <div class="lg:col-span-7 flex flex-col justify-between space-y-4">
+                    
+                    <!-- Hero Explanation Card inside Window -->
+                    <div class="p-4 rounded-xl bg-gradient-to-br from-slate-800/80 to-slate-900/90 border border-white/10 shadow-inner">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+                                <i class="ph-fill ph-sparkle"></i> Corner-Anchored Kinetic Pill
+                            </span>
+                            <span id="active-corner-pill-badge" class="text-[11px] text-sky-300 mono bg-sky-500/10 border border-sky-400/20 px-2 py-0.5 rounded">Top-Right Corner</span>
+                        </div>
+                        <h2 class="text-base font-bold text-white leading-snug">
+                            Anchored in the Corner — Expanding Smoothly Inward
+                        </h2>
+                        <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                            Move your cursor to the <strong id="hero-corner-text" class="text-white">top-right corner</strong> of this window. The capsule expands inward so it never clips off-screen, keeping the crimson <strong class="text-rose-300">Close</strong> zone pinned right at the outer corner edge for effortless Fitts's Law targeting.
+                        </p>
+
+                        <!-- Live Gesture Visualizer Meter -->
+                        <div class="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-400">Last Action:</span>
+                                <span id="last-action-badge" class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-medium text-[11px]">
+                                    Ready for input
+                                </span>
+                            </div>
+                            <span id="drag-vector-readout" class="mono text-[11px] text-slate-400">Δx: 0px, Δy: 0px</span>
+                        </div>
+                    </div>
+
+                    <!-- Feature 1: Status Aura Switcher (Directly Changes the Horizon Pill Glow) -->
+                    <div class="p-4 rounded-xl bg-slate-950/50 border border-white/10">
+                        <div class="flex items-center justify-between mb-2.5">
+                            <div>
+                                <h3 class="text-xs font-semibold text-white uppercase tracking-wider">1. Test Dynamic Status Aura</h3>
+                                <p class="text-[11px] text-slate-400">The pill's border glow communicates window state before you even hover.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2">
+                            <!-- Idle State Button -->
+                            <button onclick="setWindowAura('idle')" id="aura-btn-idle"
+                                class="aura-mode-btn p-2.5 rounded-lg border border-white/30 bg-white/10 text-left transition flex flex-col justify-between">
+                                <div class="flex items-center justify-between">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_8px_#fff]"></span>
+                                    <span class="text-[10px] mono text-slate-300">Default</span>
+                                </div>
+                                <div class="mt-2">
+                                    <p class="text-xs font-semibold text-white">Frosted Idle</p>
+                                    <p class="text-[10px] text-slate-400">All changes saved</p>
+                                </div>
+                            </button>
+
+                            <!-- Unsaved State Button -->
+                            <button onclick="setWindowAura('unsaved')" id="aura-btn-unsaved"
+                                class="aura-mode-btn p-2.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-left transition flex flex-col justify-between">
+                                <div class="flex items-center justify-between">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_10px_#f59e0b]"></span>
+                                    <span class="text-[10px] mono text-amber-300">Modified</span>
+                                </div>
+                                <div class="mt-2">
+                                    <p class="text-xs font-semibold text-amber-200">Amber Aura</p>
+                                    <p class="text-[10px] text-slate-400">Unsaved work</p>
+                                </div>
+                            </button>
+
+                            <!-- Processing / Downloading State Button -->
+                            <button onclick="setWindowAura('processing')" id="aura-btn-processing"
+                                class="aura-mode-btn p-2.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-left transition flex flex-col justify-between">
+                                <div class="flex items-center justify-between">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_10px_#38bdf8] animate-ping"></span>
+                                    <span class="text-[10px] mono text-sky-300">Active</span>
+                                </div>
+                                <div class="mt-2">
+                                    <p class="text-xs font-semibold text-sky-200">Blue Pulse</p>
+                                    <p class="text-[10px] text-slate-400">Rendering 4K...</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Live Document Scratchpad (Typing triggers Amber Unsaved Aura automatically!) -->
+                    <div class="p-3.5 rounded-xl bg-slate-950/40 border border-white/10 flex-1 flex flex-col">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
+                                <i class="ph-bold ph-note-pencil text-amber-400"></i>
+                                Interactive Scratchpad (Type below to auto-trigger Amber Unsaved Aura)
+                            </span>
+                            <button onclick="saveScratchpad()" class="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold transition">
+                                Save (⌘S)
+                            </button>
+                        </div>
+                        <textarea id="live-scratchpad" rows="2" 
+                            oninput="onScratchpadInput()"
+                            class="w-full flex-1 bg-slate-900/70 border border-white/10 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-400/50 resize-none"
+                            placeholder="Type anything here... Watch the Horizon Pill at the top-center automatically glow Amber to warn of unsaved changes!"></textarea>
+                    </div>
+                </div>
+
+                <!-- Right Column: Spatial Physics Map & Telemetry -->
+                <div class="lg:col-span-5 flex flex-col justify-between space-y-4">
+                    
+                    <!-- Spatial Gesture Compass Card -->
+                    <div class="p-4 rounded-xl bg-slate-950/60 border border-white/10 flex flex-col items-center text-center">
+                        <h3 class="text-xs font-semibold text-white uppercase tracking-wider mb-1">Spatial Flick Compass</h3>
+                        <p class="text-[11px] text-slate-400 mb-3">Click & drag the top Horizon Pill in any direction—or click a compass node below:</p>
+
+                        <!-- Visual 4-Way Spatial Diagram -->
+                        <div class="relative w-48 h-40 flex items-center justify-center">
+                            <!-- Up: Maximize -->
+                            <button onclick="triggerWindowAction('toggle-maximize')" 
+                                class="absolute top-0 px-3 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-300 text-[11px] font-medium flex items-center gap-1 transition shadow">
+                                <i class="ph-bold ph-arrow-up"></i> Flick Up: Max
+                            </button>
+
+                            <!-- Left: Snap Left -->
+                            <button onclick="triggerWindowAction('snap-left')" 
+                                class="absolute left-0 px-2.5 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/30 border border-sky-400/40 text-sky-300 text-[11px] font-medium flex items-center gap-1 transition shadow">
+                                <i class="ph-bold ph-arrow-left"></i> 50% L
+                            </button>
+
+                            <!-- Center Mini Pill Icon -->
+                            <div class="w-12 h-3.5 rounded-full bg-white/30 border border-white/60 shadow-[0_0_12px_rgba(255,255,255,0.4)]"></div>
+
+                            <!-- Right: Snap Right -->
+                            <button onclick="triggerWindowAction('snap-right')" 
+                                class="absolute right-0 px-2.5 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/30 border border-sky-400/40 text-sky-300 text-[11px] font-medium flex items-center gap-1 transition shadow">
+                                50% R <i class="ph-bold ph-arrow-right"></i>
+                            </button>
+
+                            <!-- Down: Live Pip -->
+                            <button onclick="triggerWindowAction('minimize-pip')" 
+                                class="absolute bottom-0 px-3 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 text-[11px] font-medium flex items-center gap-1 transition shadow">
+                                <i class="ph-bold ph-arrow-down"></i> Flick Down: Pip
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Time-Loop Safety Net Showcase Card -->
+                    <div class="p-4 rounded-xl bg-rose-950/25 border border-rose-500/25 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-semibold text-rose-300 flex items-center gap-1.5">
+                                    <i class="ph-bold ph-clock-counter-clockwise"></i>
+                                    Time-Loop Close Safety Net
+                                </span>
+                                <span class="text-[10px] mono px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300">5.0s Undo</span>
+                            </div>
+                            <p class="text-[11px] text-slate-300 mt-1.5 leading-relaxed">
+                                Accidental closes never interrupt you with a popup dialog. Closing collapses the window into a <strong class="text-white">5-second glowing ring</strong> at the top of the screen for instant 1-click recovery.
+                            </p>
+                        </div>
+                        <button onclick="triggerWindowAction('close-window')"
+                            class="mt-3 w-full py-2 rounded-lg bg-rose-600/80 hover:bg-rose-600 text-white font-semibold text-xs transition flex items-center justify-center gap-1.5 shadow-lg shadow-rose-950/50">
+                            <i class="ph-bold ph-power"></i> Test "Time-Loop Close" Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 2. FLOATING "LIVE PIP" MINI-WIDGET (When Minimized Downward)   -->
+        <!-- ============================================================== -->
+        <div id="live-pip-widget" 
+             onclick="restoreFromPip()"
+             class="pointer-events-none opacity-0 translate-y-8 scale-90 transition-all duration-300 fixed bottom-20 left-6 z-40 w-72 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-sky-400/40 shadow-[0_20px_50px_rgba(0,0,0,0.85)] p-3.5 cursor-pointer group hover:border-sky-400 hover:scale-[1.02]">
+            
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-sky-400 animate-ping"></span>
+                    <span class="text-xs font-bold text-white">Nova Studio — Live Pip</span>
+                </div>
+                <span class="px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 text-[10px] font-semibold group-hover:bg-sky-500 group-hover:text-slate-950 transition">
+                    Click to Expand ↗
+                </span>
+            </div>
+
+            <p class="text-[11px] text-slate-300 mb-2.5">
+                Instead of vanishing into a crowded dock, minimized windows stay alive on your screen edge with real-time telemetry.
+            </p>
+
+            <!-- Live Progress Bar inside Pip -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-[10px] mono text-slate-400">
+                    <span id="pip-task-label">Background Render Progress</span>
+                    <span id="pip-progress-text" class="text-sky-300">64%</span>
+                </div>
+                <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                    <div id="pip-progress-bar" class="h-full bg-gradient-to-r from-sky-400 to-indigo-500 transition-all duration-300" style="width: 64%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- 3. THE 5-SECOND "UNDO CLOSE" TIME-LOOP RING OVERLAY            -->
+        <!-- ============================================================== -->
+        <div id="undo-close-ring-container" 
+             class="pointer-events-none opacity-0 -translate-y-6 scale-90 transition-all duration-300 fixed top-12 left-1/2 -translate-x-1/2 z-50">
+            
+            <div class="flex items-center gap-3.5 pl-3 pr-4 py-2.5 rounded-full bg-slate-900/95 backdrop-blur-2xl border border-rose-500/50 shadow-[0_15px_40px_rgba(244,63,94,0.35)]">
+                
+                <!-- 5-Second SVG Circular Countdown Ring -->
+                <div class="relative w-10 h-10 flex items-center justify-center">
+                    <svg class="w-10 h-10" viewBox="0 0 40 40">
+                        <circle cx="20" cy="20" r="16" stroke="rgba(255,255,255,0.12)" stroke-width="3.5" fill="none"></circle>
+                        <circle id="undo-svg-progress" class="countdown-ring-circle" cx="20" cy="20" r="16" 
+                                stroke="#f43f5e" stroke-width="3.5" stroke-linecap="round" fill="none"
+                                stroke-dasharray="100.53" stroke-dashoffset="0"></circle>
+                    </svg>
+                    <span id="undo-seconds-text" class="absolute mono text-xs font-bold text-rose-300">5.0</span>
+                </div>
+
+                <div class="pr-1">
+                    <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span>Window Ghosted</span>
+                        <span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">State Preserved</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Closing permanently when ring completes</p>
+                </div>
+
+                <button onclick="undoCloseWindow()" 
+                        class="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-bold text-xs shadow-lg transition transform active:scale-95 flex items-center gap-1">
+                    <i class="ph-bold ph-arrow-arc-left"></i>
+                    Undo Close
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- 4. PERMANENTLY CLOSED STATE BANNER (After 5s Timer Expires)    -->
+        <!-- ============================================================== -->
+        <div id="permanently-closed-card" 
+             class="pointer-events-none opacity-0 scale-90 transition-all duration-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-96 p-6 rounded-2xl bg-slate-900/90 backdrop-blur-2xl border border-white/15 text-center shadow-2xl">
+            <div class="w-12 h-12 rounded-2xl bg-slate-800 border border-white/10 flex items-center justify-center mx-auto mb-3 text-slate-400">
+                <i class="ph-bold ph-check-circle text-2xl text-emerald-400"></i>
+            </div>
+            <h3 class="text-base font-bold text-white">Window Closed Cleanly</h3>
+            <p class="text-xs text-slate-400 mt-1 mb-4">
+                The 5-second Time-Loop safety window finished without interruption. Ready to keep testing the Kinetic Morph Pill?
+            </p>
+            <button onclick="relaunchWindow()" 
+                    class="w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2">
+                <i class="ph-bold ph-plus-circle text-sm"></i>
+                Launch Sample Window Again
+            </button>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- 5. FLOATING INTERACTION CHEAT SHEET / SIMULATOR PANEL (RIGHT)  -->
+        <!-- ============================================================== -->
+        <aside class="fixed top-12 right-4 z-40 w-72 rounded-2xl bg-slate-950/85 backdrop-blur-2xl border border-white/15 p-4 shadow-2xl hidden xl:flex flex-col gap-3">
+            <div class="flex items-center justify-between border-b border-white/10 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ph-sliders-horizontal text-sky-400 text-base"></i>
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-white">Controls Cheat Sheet</h2>
+                </div>
+                <span class="text-[10px] px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-medium">Interactive</span>
+            </div>
+
+            <p class="text-[11px] text-slate-300 leading-relaxed">
+                Interact directly with the <strong class="text-white">Corner Horizon Pill</strong> on the window header, or switch corners below:
+            </p>
+
+            <!-- Corner Placement Switcher in Cheat Sheet -->
+            <div class="p-2 rounded-xl bg-slate-900/90 border border-white/10">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
+                    <span>Corner Placement</span>
+                    <span class="text-sky-400">Ergonomic Mode</span>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button id="panel-corner-left" onclick="setPillCorner('left')" class="py-1.5 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-slate-300 flex items-center justify-center gap-1.5 transition">
+                        <i class="ph-bold ph-arrow-up-left text-sky-400"></i> Top-Left
+                    </button>
+                    <button id="panel-corner-right" onclick="setPillCorner('right')" class="py-1.5 px-2 rounded-lg bg-sky-500/20 border border-sky-400/40 text-[11px] font-semibold text-sky-200 flex items-center justify-center gap-1.5 transition">
+                        Top-Right <i class="ph-bold ph-arrow-up-right text-sky-400"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Gesture Trigger Buttons -->
+            <div class="space-y-1.5 text-xs">
+                <button onclick="triggerDemoHoverWake()" class="w-full p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between transition text-left">
+                    <div class="flex items-center gap-2">
+                        <i class="ph-bold ph-eye text-purple-400"></i>
+                        <div>
+                            <div class="font-semibold text-white text-[11px]">Toggle Pill Wake-Up</div>
+                            <div class="text-[10px] text-slate-400">Proximity 3-segment morph</div>
+                        </div>
+                    </div>
+                    <span class="mono text-[10px] text-slate-400">Hover</span>
+                </button>
+
+                <button onclick="triggerWindowAction('toggle-maximize')" class="w-full p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between transition text-left">
+                    <div class="flex items-center gap-2">
+                        <i class="ph-bold ph-arrow-fat-up text-emerald-400"></i>
+                        <div>
+                            <div class="font-semibold text-white text-[11px]">Maximize / Restore</div>
+                            <div class="text-[10px] text-slate-400">Flick Pill Up or Double-Click</div>
+                        </div>
+                    </div>
+                    <span class="mono text-[10px] text-emerald-300">Flick ↑</span>
+                </button>
+
+                <button onclick="triggerWindowAction('minimize-pip')" class="w-full p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between transition text-left">
+                    <div class="flex items-center gap-2">
+                        <i class="ph-bold ph-picture-in-picture text-amber-400"></i>
+                        <div>
+                            <div class="font-semibold text-white text-[11px]">Minimize to "Live Pip"</div>
+                            <div class="text-[10px] text-slate-400">Flick Pill Downward</div>
+                        </div>
+                    </div>
+                    <span class="mono text-[10px] text-amber-300">Flick ↓</span>
+                </button>
+
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button onclick="triggerWindowAction('snap-left')" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-1.5 transition text-left">
+                        <i class="ph-bold ph-caret-double-left text-sky-400"></i>
+                        <div>
+                            <div class="font-semibold text-white text-[11px]">Snap Left</div>
+                            <div class="text-[9px] text-slate-400">Drag Left 50%</div>
+                        </div>
+                    </button>
+                    <button onclick="triggerWindowAction('snap-right')" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-1.5 transition text-left">
+                        <i class="ph-bold ph-caret-double-right text-sky-400"></i>
+                        <div>
+                            <div class="font-semibold text-white text-[11px]">Snap Right</div>
+                            <div class="text-[9px] text-slate-400">Drag Right 50%</div>
+                        </div>
+                    </button>
+                </div>
+
+                <button onclick="triggerWindowAction('reset-center')" class="w-full p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between transition text-left">
+                    <div class="flex items-center gap-2">
+                        <i class="ph-bold ph-corners-in text-slate-300"></i>
+                        <span class="font-semibold text-white text-[11px]">Center Default Window</span>
+                    </div>
+                    <span class="mono text-[10px] text-slate-400">Reset</span>
+                </button>
+
+                <button onclick="triggerWindowAction('close-window')" class="w-full p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 flex items-center justify-between transition text-left">
+                    <div class="flex items-center gap-2">
+                        <i class="ph-bold ph-clock-countdown text-rose-400"></i>
+                        <div>
+                            <div class="font-semibold text-rose-200 text-[11px]">Close (5s Time-Loop)</div>
+                            <div class="text-[10px] text-rose-300/80">Click Red Zone or Middle-Click</div>
+                        </div>
+                    </div>
+                    <span class="mono text-[10px] text-rose-300">Close</span>
+                </button>
+            </div>
+        </aside>
+
+    </main>
+
+    <!-- BOTTOM OS DOCK BAR -->
+    <footer class="h-14 w-full flex items-center justify-center pb-2 z-40 pointer-events-none">
+        <div class="pointer-events-auto px-3 py-1.5 rounded-2xl bg-slate-950/75 backdrop-blur-2xl border border-white/15 shadow-2xl flex items-center gap-2">
+            
+            <button onclick="relaunchWindow()" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-medium text-white flex items-center gap-2 transition" title="Restore / Center Studio Window">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <i class="ph-bold ph-cube-transparent text-sky-400 text-sm"></i>
+                <span>Nova Studio</span>
+            </button>
+
+            <div class="h-5 w-[1px] bg-white/10 mx-1"></div>
+
+            <!-- Mobile / Compact Quick Triggers in Dock -->
+            <button onclick="triggerWindowAction('snap-left')" class="p-2 rounded-xl hover:bg-white/10 text-slate-300 hover:text-white transition text-xs flex items-center gap-1" title="Snap Left 50%">
+                <i class="ph-bold ph-align-left text-sm"></i>
+                <span class="hidden sm:inline text-[11px]">Left 50%</span>
+            </button>
+            <button onclick="triggerWindowAction('toggle-maximize')" class="p-2 rounded-xl hover:bg-white/10 text-slate-300 hover:text-white transition text-xs flex items-center gap-1" title="Maximize / Restore">
+                <i class="ph-bold ph-arrows-out text-sm"></i>
+                <span class="hidden sm:inline text-[11px]">Maximize</span>
+            </button>
+            <button onclick="triggerWindowAction('snap-right')" class="p-2 rounded-xl hover:bg-white/10 text-slate-300 hover:text-white transition text-xs flex items-center gap-1" title="Snap Right 50%">
+                <i class="ph-bold ph-align-right text-sm"></i>
+                <span class="hidden sm:inline text-[11px]">Right 50%</span>
+            </button>
+            <button onclick="triggerWindowAction('minimize-pip')" class="p-2 rounded-xl hover:bg-white/10 text-amber-300 hover:text-amber-200 transition text-xs flex items-center gap-1" title="Flick Down: Live Pip">
+                <i class="ph-bold ph-picture-in-picture text-sm"></i>
+                <span class="hidden sm:inline text-[11px]">Live Pip</span>
+            </button>
+            <button onclick="triggerWindowAction('close-window')" class="p-2 rounded-xl hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 transition text-xs flex items-center gap-1" title="Close with 5s Time-Loop Undo">
+                <i class="ph-bold ph-x-circle text-sm"></i>
+                <span class="hidden sm:inline text-[11px]">Time-Loop Close</span>
+            </button>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT ENGINE FOR KINETIC MORPH PILL GESTURES & STATES -->
+    <script>
+        const appWindow = document.getElementById('app-window');
+        const horizonPill = document.getElementById('horizon-pill');
+        const horizonPillWrapper = document.getElementById('horizon-pill-wrapper');
+        const snapPreviewOverlay = document.getElementById('snap-preview-overlay');
+        const snapPreviewLabel = document.getElementById('snap-preview-label');
+        const livePipWidget = document.getElementById('live-pip-widget');
+        const undoRingContainer = document.getElementById('undo-close-ring-container');
+        const undoSvgProgress = document.getElementById('undo-svg-progress');
+        const undoSecondsText = document.getElementById('undo-seconds-text');
+        const permanentlyClosedCard = document.getElementById('permanently-closed-card');
+
+        const topBarModeBadge = document.getElementById('top-bar-mode-badge');
+        const windowSizePill = document.getElementById('window-size-pill');
+        const lastActionBadge = document.getElementById('last-action-badge');
+        const dragVectorReadout = document.getElementById('drag-vector-readout');
+        const gestureTelemetryText = document.getElementById('gesture-telemetry-text');
+
+        // Window State Tracking
+        let currentWindowState = 'default'; // 'default', 'maximized', 'snap-left', 'snap-right', 'pip', 'closing', 'closed'
+        let currentAura = 'idle'; // 'idle', 'unsaved', 'processing'
+        let currentPillCorner = 'right'; // 'right' (Windows style) or 'left' (Mac style)
+        let undoInterval = null;
+        let undoRemainingMs = 5000;
+        let renderProgress = 64;
+
+        // =========================================================================
+        // 0. CORNER PLACEMENT SWITCHER (Top-Right vs Top-Left)
+        // =========================================================================
+        function setPillCorner(corner) {
+            currentPillCorner = corner;
+            const titlebar = document.getElementById('window-titlebar');
+            const tooltip = document.getElementById('pill-micro-tooltip');
+            const zoneTile = document.getElementById('pill-zone-tile');
+            const zoneMorph = document.getElementById('pill-zone-morph');
+            const zoneClose = document.getElementById('pill-zone-close');
+            const segmentsGrid = document.getElementById('pill-segments-grid');
+
+            const btnLeft = document.getElementById('corner-btn-left');
+            const btnRight = document.getElementById('corner-btn-right');
+            const panelLeft = document.getElementById('panel-corner-left');
+            const panelRight = document.getElementById('panel-corner-right');
+            const cornerBadge = document.getElementById('active-corner-pill-badge');
+            const heroCornerText = document.getElementById('hero-corner-text');
+
+            if (corner === 'left') {
+                // Place Horizon Pill on Top-Left (Mac Style) and expand inward to the right
+                titlebar.classList.add('flex-row-reverse');
+                horizonPillWrapper.classList.remove('items-end');
+                horizonPillWrapper.classList.add('items-start');
+                tooltip.classList.remove('right-0');
+                tooltip.classList.add('left-0');
+
+                // Put Close button on the far-left outer corner edge for true Fitts's Law ergonomics
+                segmentsGrid.innerHTML = '';
+                zoneClose.className = 'h-full w-full flex items-center justify-center gap-1 bg-rose-500/20 hover:bg-rose-600 text-rose-200 hover:text-white transition-all duration-150 px-2 border-r border-white/10 group/close';
+                zoneMorph.className = 'h-full flex items-center justify-center gap-1.5 hover:bg-white/10 transition-colors border-r border-white/10 px-1.5';
+                zoneTile.className = 'h-full flex items-center justify-center gap-1 hover:bg-white/10 transition-colors px-1.5';
+                segmentsGrid.appendChild(zoneClose);
+                segmentsGrid.appendChild(zoneMorph);
+                segmentsGrid.appendChild(zoneTile);
+
+                // Update active button styles
+                btnLeft.className = 'px-2 py-0.5 rounded-md bg-sky-500/25 text-sky-300 border border-sky-400/30 font-semibold transition flex items-center gap-1';
+                btnRight.className = 'px-2 py-0.5 rounded-md text-slate-400 hover:text-white transition flex items-center gap-1';
+                panelLeft.className = 'py-1.5 px-2 rounded-lg bg-sky-500/20 border border-sky-400/40 text-[11px] font-semibold text-sky-200 flex items-center justify-center gap-1.5 transition';
+                panelRight.className = 'py-1.5 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-slate-300 flex items-center justify-center gap-1.5 transition';
+
+                cornerBadge.textContent = 'Top-Left Corner';
+                heroCornerText.textContent = 'top-left corner';
+                updateTelemetry('Shifted Horizon Pill to Top-Left Corner (Mac Ergonomic Style)');
+            } else {
+                // Place Horizon Pill on Top-Right (Windows Style) and expand inward to the left
+                titlebar.classList.remove('flex-row-reverse');
+                horizonPillWrapper.classList.remove('items-start');
+                horizonPillWrapper.classList.add('items-end');
+                tooltip.classList.remove('left-0');
+                tooltip.classList.add('right-0');
+
+                // Put Close button on the far-right outer corner edge
+                segmentsGrid.innerHTML = '';
+                zoneTile.className = 'h-full flex items-center justify-center gap-1 hover:bg-white/10 transition-colors border-r border-white/10 px-1.5';
+                zoneMorph.className = 'h-full flex items-center justify-center gap-1.5 hover:bg-white/10 transition-colors border-r border-white/10 px-1.5';
+                zoneClose.className = 'h-full w-full flex items-center justify-center gap-1 bg-rose-500/20 hover:bg-rose-600 text-rose-200 hover:text-white transition-all duration-150 px-2 group/close';
+                segmentsGrid.appendChild(zoneTile);
+                segmentsGrid.appendChild(zoneMorph);
+                segmentsGrid.appendChild(zoneClose);
+
+                // Update active button styles
+                btnRight.className = 'px-2 py-0.5 rounded-md bg-sky-500/25 text-sky-300 border border-sky-400/30 font-semibold transition flex items-center gap-1';
+                btnLeft.className = 'px-2 py-0.5 rounded-md text-slate-400 hover:text-white transition flex items-center gap-1';
+                panelRight.className = 'py-1.5 px-2 rounded-lg bg-sky-500/20 border border-sky-400/40 text-[11px] font-semibold text-sky-200 flex items-center justify-center gap-1.5 transition';
+                panelLeft.className = 'py-1.5 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-slate-300 flex items-center justify-center gap-1.5 transition';
+
+                cornerBadge.textContent = 'Top-Right Corner';
+                heroCornerText.textContent = 'top-right corner';
+                updateTelemetry('Shifted Horizon Pill to Top-Right Corner (Windows Ergonomic Style)');
+            }
+        }
+
+        // Live Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('system-clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        setInterval(updateClock, 10000);
+        updateClock();
+
+        // Simulated Background Render Progress for Live Pip & Processing Aura
+        setInterval(() => {
+            renderProgress = (renderProgress + 1) % 101;
+            if (renderProgress < 15) renderProgress = 18;
+            document.getElementById('pip-progress-text').textContent = renderProgress + '%';
+            document.getElementById('pip-progress-bar').style.width = renderProgress + '%';
+            document.querySelectorAll('.render-pct').forEach(el => el.textContent = renderProgress + '%');
+        }, 900);
+
+        // =========================================================================
+        // 1. STATUS AURA SWITCHER (Idle White, Unsaved Amber, Processing Blue)
+        // =========================================================================
+        function setWindowAura(mode) {
+            currentAura = mode;
+            horizonPill.classList.remove('aura-idle', 'aura-unsaved', 'aura-processing');
+            
+            const unsavedBadge = document.getElementById('unsaved-badge');
+            const renderBadge = document.getElementById('render-badge');
+            const auraTopDot = document.getElementById('aura-top-dot');
+            const auraTopLabel = document.getElementById('aura-top-label');
+
+            // Reset button highlights
+            document.querySelectorAll('.aura-mode-btn').forEach(btn => {
+                btn.classList.remove('border-white/40', 'bg-white/15', 'border-amber-400/60', 'bg-amber-500/15', 'border-sky-400/60', 'bg-sky-500/15');
+                btn.classList.add('border-white/10', 'bg-white/5');
+            });
+
+            if (mode === 'idle') {
+                horizonPill.classList.add('aura-idle');
+                unsavedBadge.classList.add('hidden');
+                renderBadge.classList.add('hidden');
+                auraTopDot.className = 'w-2 h-2 rounded-full bg-white shadow-[0_0_6px_#fff]';
+                auraTopLabel.textContent = 'Aura: Frosted Idle';
+                document.getElementById('aura-btn-idle').classList.add('border-white/40', 'bg-white/15');
+                updateTelemetry('Aura set to Frosted White (Idle / Saved)');
+            } else if (mode === 'unsaved') {
+                horizonPill.classList.add('aura-unsaved');
+                unsavedBadge.classList.remove('hidden');
+                renderBadge.classList.add('hidden');
+                auraTopDot.className = 'w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]';
+                auraTopLabel.textContent = 'Aura: Unsaved Changes';
+                document.getElementById('aura-btn-unsaved').classList.add('border-amber-400/60', 'bg-amber-500/15');
+                updateTelemetry('Aura glowing Amber — Unsaved edits detected');
+            } else if (mode === 'processing') {
+                horizonPill.classList.add('aura-processing');
+                unsavedBadge.classList.add('hidden');
+                renderBadge.classList.remove('hidden');
+                auraTopDot.className = 'w-2 h-2 rounded-full bg-sky-400 animate-ping';
+                auraTopLabel.textContent = 'Aura: Background Task';
+                document.getElementById('aura-btn-processing').classList.add('border-sky-400/60', 'bg-sky-500/15');
+                updateTelemetry('Aura pulsing Sky Blue — Background render active');
+            }
+        }
+
+        function onScratchpadInput() {
+            if (currentAura !== 'unsaved') {
+                setWindowAura('unsaved');
+            }
+        }
+
+        function saveScratchpad() {
+            setWindowAura('idle');
+            updateTelemetry('Document saved! Horizon Pill returned to calm Frosted White.');
+        }
+
+        // =========================================================================
+        // 2. WINDOW GEOMETRY & SPATIAL ACTIONS
+        // =========================================================================
+        function getCenteredGeometry() {
+            const stage = document.getElementById('desktop-stage');
+            const sw = stage.clientWidth;
+            const sh = stage.clientHeight;
+            const isXL = window.innerWidth >= 1280;
+            const w = Math.min(780, sw - (isXL ? 340 : 32));
+            const h = Math.min(510, sh - 40);
+            const left = isXL ? Math.max(24, (sw - 300 - w) / 2) : Math.max(16, (sw - w) / 2);
+            const top = Math.max(16, (sh - h) / 2);
+            return { w, h, top, left };
+        }
+
+        function applyCenteredGeometry() {
+            const g = getCenteredGeometry();
+            appWindow.style.width = g.w + 'px';
+            appWindow.style.height = g.h + 'px';
+            appWindow.style.top = g.top + 'px';
+            appWindow.style.left = g.left + 'px';
+            appWindow.style.borderRadius = '18px';
+            appWindow.style.transform = 'scale(1) translate(0px, 0px)';
+            appWindow.style.opacity = '1';
+            appWindow.style.pointerEvents = 'auto';
+        }
+
+        function triggerWindowAction(action) {
+            // Clear any active Time-Loop Undo countdown if user interacts
+            if (currentWindowState === 'closing' || currentWindowState === 'closed') {
+                clearUndoCountdown();
+                permanentlyClosedCard.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
+            }
+
+            // Hide Live Pip if restoring
+            if (currentWindowState === 'pip' && action !== 'minimize-pip') {
+                livePipWidget.classList.add('opacity-0', 'translate-y-8', 'scale-90', 'pointer-events-none');
+            }
+
+            const stage = document.getElementById('desktop-stage');
+            const sw = stage.clientWidth;
+            const sh = stage.clientHeight;
+
+            if (action === 'toggle-maximize') {
+                if (currentWindowState === 'maximized') {
+                    triggerWindowAction('reset-center');
+                    return;
+                }
+                currentWindowState = 'maximized';
+                appWindow.style.width = (sw - 16) + 'px';
+                appWindow.style.height = (sh - 16) + 'px';
+                appWindow.style.top = '8px';
+                appWindow.style.left = '8px';
+                appWindow.style.borderRadius = '14px';
+                appWindow.style.transform = 'scale(1) translate(0px, 0px)';
+                appWindow.style.opacity = '1';
+                appWindow.style.pointerEvents = 'auto';
+
+                topBarModeBadge.textContent = 'State: Fullscreen Maximized';
+                windowSizePill.textContent = '100% Fullscreen';
+                updateTelemetry('Flick Up ↑ — Maximized Window');
+            } 
+            else if (action === 'snap-left') {
+                currentWindowState = 'snap-left';
+                appWindow.style.width = (Math.floor(sw / 2) - 12) + 'px';
+                appWindow.style.height = (sh - 16) + 'px';
+                appWindow.style.top = '8px';
+                appWindow.style.left = '8px';
+                appWindow.style.borderRadius = '16px';
+                appWindow.style.transform = 'scale(1) translate(0px, 0px)';
+                appWindow.style.opacity = '1';
+                appWindow.style.pointerEvents = 'auto';
+
+                topBarModeBadge.textContent = 'State: Left 50% Split';
+                windowSizePill.textContent = 'Left 50% Tile';
+                updateTelemetry('Dragged Left ← — Snapped to Left 50%');
+            } 
+            else if (action === 'snap-right') {
+                currentWindowState = 'snap-right';
+                const halfW = Math.floor(sw / 2) - 12;
+                appWindow.style.width = halfW + 'px';
+                appWindow.style.height = (sh - 16) + 'px';
+                appWindow.style.top = '8px';
+                appWindow.style.left = (sw - halfW - 8) + 'px';
+                appWindow.style.borderRadius = '16px';
+                appWindow.style.transform = 'scale(1) translate(0px, 0px)';
+                appWindow.style.opacity = '1';
+                appWindow.style.pointerEvents = 'auto';
+
+                topBarModeBadge.textContent = 'State: Right 50% Split';
+                windowSizePill.textContent = 'Right 50% Tile';
+                updateTelemetry('Dragged Right → — Snapped to Right 50%');
+            } 
+            else if (action === 'minimize-pip') {
+                currentWindowState = 'pip';
+                appWindow.style.transform = 'translate(-260px, 240px) scale(0.18)';
+                appWindow.style.opacity = '0';
+                appWindow.style.pointerEvents = 'none';
+
+                livePipWidget.classList.remove('opacity-0', 'translate-y-8', 'scale-90', 'pointer-events-none');
+                topBarModeBadge.textContent = 'State: Live Pip Minimized';
+                updateTelemetry('Flick Down ↓ — Folded into Live Pip Widget');
+            } 
+            else if (action === 'close-window') {
+                startUndoCloseSequence();
+            } 
+            else {
+                currentWindowState = 'default';
+                applyCenteredGeometry();
+                topBarModeBadge.textContent = 'State: Centered Window';
+                windowSizePill.textContent = 'Default View';
+                updateTelemetry('Restored to Default Centered Window');
+            }
+        }
+
+        function cycleSnapSplit() {
+            if (currentWindowState === 'snap-left') {
+                triggerWindowAction('snap-right');
+            } else {
+                triggerWindowAction('snap-left');
+            }
+        }
+
+        function restoreFromPip() {
+            livePipWidget.classList.add('opacity-0', 'translate-y-8', 'scale-90', 'pointer-events-none');
+            triggerWindowAction('reset-center');
+            updateTelemetry('Expanded Live Pip back to full Studio Window');
+        }
+
+        // =========================================================================
+        // 3. THE 5-SECOND "TIME-LOOP" UNDO CLOSE SAFETY NET
+        // =========================================================================
+        function startUndoCloseSequence() {
+            clearUndoCountdown();
+            currentWindowState = 'closing';
+
+            // Morph window upward into the top-center countdown ring
+            appWindow.style.transform = 'translateY(-220px) scale(0.12)';
+            appWindow.style.opacity = '0';
+            appWindow.style.pointerEvents = 'none';
+            livePipWidget.classList.add('opacity-0', 'translate-y-8', 'scale-90', 'pointer-events-none');
+
+            // Reveal 5-second Time-Loop Ring
+            undoRingContainer.classList.remove('opacity-0', '-translate-y-6', 'scale-90', 'pointer-events-none');
+            topBarModeBadge.textContent = 'State: Time-Loop Ghost (5s Undo)';
+            updateTelemetry('Window Closed — 5-Second Time-Loop Safety Ring Active');
+
+            const totalMs = 5000;
+            undoRemainingMs = totalMs;
+            const circumference = 100.53;
+
+            undoInterval = setInterval(() => {
+                undoRemainingMs -= 50;
+                if (undoRemainingMs <= 0) {
+                    clearUndoCountdown();
+                    finalizePermanentClose();
+                } else {
+                    const sec = (undoRemainingMs / 1000).toFixed(1);
+                    undoSecondsText.textContent = sec;
+                    const offset = circumference * (1 - undoRemainingMs / totalMs);
+                    undoSvgProgress.style.strokeDashoffset = offset;
+                }
+            }, 50);
+        }
+
+        function clearUndoCountdown() {
+            if (undoInterval) {
+                clearInterval(undoInterval);
+                undoInterval = null;
+            }
+            undoRingContainer.classList.add('opacity-0', '-translate-y-6', 'scale-90', 'pointer-events-none');
+            undoSvgProgress.style.strokeDashoffset = '0';
+        }
+
+        function undoCloseWindow() {
+            clearUndoCountdown();
+            triggerWindowAction('reset-center');
+            updateTelemetry('Time-Loop Reversed! Window sprang back open with zero data loss.');
+        }
+
+        function finalizePermanentClose() {
+            currentWindowState = 'closed';
+            topBarModeBadge.textContent = 'State: Closed';
+            permanentlyClosedCard.classList.remove('opacity-0', 'scale-90', 'pointer-events-none');
+            updateTelemetry('5s Countdown Completed — Window Closed Cleanly');
+        }
+
+        function relaunchWindow() {
+            clearUndoCountdown();
+            permanentlyClosedCard.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
+            livePipWidget.classList.add('opacity-0', 'translate-y-8', 'scale-90', 'pointer-events-none');
+            triggerWindowAction('reset-center');
+        }
+
+        // =========================================================================
+        // 4. DIRECT DRAG & FLICK PHYSICS ON THE KINETIC MORPH PILL
+        // =========================================================================
+        let isDraggingPill = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let pendingGestureAction = null;
+
+        horizonPillWrapper.addEventListener('pointerdown', (e) => {
+            // Middle-Click anywhere on the pill triggers instant Close with Undo Ring
+            if (e.button === 1) {
+                e.preventDefault();
+                triggerWindowAction('close-window');
+                return;
+            }
+            // Ignore if clicking directly on an inner action button
+            if (e.target.closest('button')) return;
+
+            isDraggingPill = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            pendingGestureAction = null;
+
+            horizonPill.classList.add('pill-active');
+            appWindow.classList.add('dragging-pill');
+            horizonPillWrapper.setPointerCapture(e.pointerId);
+        });
+
+        horizonPillWrapper.addEventListener('pointermove', (e) => {
+            if (!isDraggingPill) return;
+
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+            dragVectorReadout.textContent = `Δx: ${Math.round(dx)}px, Δy: ${Math.round(dy)}px`;
+
+            // Elastic feedback on window and pill
+            const clampedX = Math.max(-75, Math.min(75, dx * 0.35));
+            const clampedY = Math.max(-55, Math.min(55, dy * 0.35));
+            appWindow.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
+
+            // Determine Spatial Gesture Zone
+            const stage = document.getElementById('desktop-stage');
+            const sw = stage.clientWidth;
+            const sh = stage.clientHeight;
+
+            if (dy < -42 && Math.abs(dy) > Math.abs(dx)) {
+                pendingGestureAction = 'toggle-maximize';
+                showSnapPreview(8, 8, sw - 16, sh - 16, 'Release to Maximize Fullscreen ↑');
+            } else if (dy > 48 && Math.abs(dy) > Math.abs(dx)) {
+                pendingGestureAction = 'minimize-pip';
+                showSnapPreview(24, sh - 160, 280, 125, 'Release to Fold into Live Pip ↓');
+            } else if (dx < -55 && Math.abs(dx) >= Math.abs(dy)) {
+                pendingGestureAction = 'snap-left';
+                showSnapPreview(8, 8, Math.floor(sw / 2) - 12, sh - 16, 'Release to Tile Left 50% ←');
+            } else if (dx > 55 && Math.abs(dx) >= Math.abs(dy)) {
+                pendingGestureAction = 'snap-right';
+                const halfW = Math.floor(sw / 2) - 12;
+                showSnapPreview(sw - halfW - 8, 8, halfW, sh - 16, 'Release to Tile Right 50% →');
+            } else {
+                pendingGestureAction = null;
+                hideSnapPreview();
+            }
+        });
+
+        horizonPillWrapper.addEventListener('pointerup', (e) => {
+            if (!isDraggingPill) return;
+            isDraggingPill = false;
+            horizonPill.classList.remove('pill-active');
+            appWindow.classList.remove('dragging-pill');
+            hideSnapPreview();
+
+            if (pendingGestureAction) {
+                triggerWindowAction(pendingGestureAction);
+            } else {
+                appWindow.style.transform = 'translate(0px, 0px)';
+            }
+            pendingGestureAction = null;
+        });
+
+        function showSnapPreview(left, top, width, height, label) {
+            snapPreviewOverlay.style.left = left + 'px';
+            snapPreviewOverlay.style.top = top + 'px';
+            snapPreviewOverlay.style.width = width + 'px';
+            snapPreviewOverlay.style.height = height + 'px';
+            snapPreviewOverlay.style.opacity = '1';
+            snapPreviewLabel.textContent = label;
+        }
+
+        function hideSnapPreview() {
+            snapPreviewOverlay.style.opacity = '0';
+        }
+
+        function triggerDemoHoverWake() {
+            horizonPill.classList.toggle('pill-active');
+            const isAwake = horizonPill.classList.contains('pill-active');
+            updateTelemetry(isAwake ? 'Horizon Pill locked in Expanded Wake-Up state' : 'Horizon Pill returned to Resting Capsule');
+        }
+
+        function updateTelemetry(message) {
+            lastActionBadge.textContent = message;
+            if (gestureTelemetryText) {
+                gestureTelemetryText.textContent = message;
+            }
+        }
+
+        // Responsive Window Recalculation on Resize
+        window.addEventListener('resize', () => {
+            if (currentWindowState === 'default') {
+                applyCenteredGeometry();
+            } else if (currentWindowState === 'maximized') {
+                triggerWindowAction('toggle-maximize');
+            } else if (currentWindowState === 'snap-left' || currentWindowState === 'snap-right') {
+                triggerWindowAction(currentWindowState);
+            }
+        });
+
+        // Initialize Default Centered Geometry on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            applyCenteredGeometry();
+        });
+    </script>
+</body>
+</html>
