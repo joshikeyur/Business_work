@@ -15,7 +15,7 @@ Welcome to my digital portfolio! I am a business-driven professional blending ma
 
 | Category | Skills & Tools |
 | :--- | :--- |
-| **Business Data Analysis** | Python (Pandas, NumPy),🐍 , AI |
+| **Business Analysis & DATA** | Python (Pandas, NumPy),🐍 , AI |
 | **Financial Management** | Accounting, Inventory Systems, Billing Workflows 🧾 |
 | **Productivity & Collaboration** | Google Workspace Specialist (Docs, Sheets, Forms, Drive) ☁️ |
 | **Data Visualization** | Building automated business reports and insights 📊 |
